@@ -19,11 +19,12 @@ using MoreLinq;
 using System.Windows.Controls;
 
 using OpenCVSize = OpenCvSharp.Size;
-using OpenCVRect = OpenCvSharp.Rect;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVPoint = OpenCvSharp.Point;
 using WPFImage = System.Windows.Controls.Image;
 using System.Windows.Threading;
 using System.Windows;
+using System.Windows.Media.Imaging;
 
 namespace ROKPuzzleSolder.PuzzleSolver
 {
@@ -34,11 +35,14 @@ namespace ROKPuzzleSolder.PuzzleSolver
         private Logger _Logger = null;
         private WPFImage _ResultImage = null;
         private WPFImage _PieceResultImage = null;
-        private WPFImage _PieceMaskImage = null;
-        private Thread _SolveThread = null;
+        private WPFImage _Piece1MaskImage = null;
+        private WPFImage _Piece2MaskImage = null;
+        private Thread _Solve1Thread = null;
+        private Thread _Solve2Thread = null;
         private Thread _DrawingThread = null;
         private WinBoardDisplay _BoardWindow = null;
-        private MatchTemplateResult _Answer = new MatchTemplateResult();
+        private MatchTemplateResult _Answer1 = new MatchTemplateResult();
+        private MatchTemplateResult _Answer2 = new MatchTemplateResult();
         private object _SolveThreadLock = new object();
         private volatile bool _IsSolving = false;
 
@@ -60,11 +64,11 @@ namespace ROKPuzzleSolder.PuzzleSolver
             _Logger = new Logger(_ListBox);
         }
 
-        public void InitializeImageControl(WPFImage _Image, WPFImage _PieceImage, WPFImage _MaskImage)
+        public void InitializeImageControl(WPFImage _Image, WPFImage _Mask1Image, WPFImage _Mask2Image)
         {
             _ResultImage = _Image;
-            _PieceResultImage = _PieceImage;
-            _PieceMaskImage = _MaskImage;
+            _Piece1MaskImage = _Mask1Image;
+            _Piece2MaskImage = _Mask2Image;
         }
 
         public void InitializeSetting()
@@ -95,9 +99,9 @@ namespace ROKPuzzleSolder.PuzzleSolver
                 return false;
             }
 
-            if (ROKPuzzleSolverSetting.PieceRect.IsAvaiableRect() == false)
+            if (ROKPuzzleSolverSetting.Piece1Rect.IsAvaiableRect() == false)
             {
-                _Logger.AddLog("조각 캡쳐 영역을 설정 후 다시 시도해주세요.");
+                _Logger.AddLog("1 조각 캡쳐 영역을 설정 후 다시 시도해주세요.");
                 return false;
             }
 
@@ -108,10 +112,16 @@ namespace ROKPuzzleSolder.PuzzleSolver
 
             _BoardWindow = new WinBoardDisplay();
             _BoardWindow.Show();
-            _BoardWindow.DrawPuzzleBoard();
 
-            _SolveThread = new Thread(SolveThreadFunction);
-            _SolveThread.Start();
+            _Solve1Thread = new Thread(new ParameterizedThreadStart(SolveThreadFunction));
+            _Solve1Thread.Start(1);
+
+            if (ROKPuzzleSolverSetting.Piece2Rect.IsAvaiableRect())
+            {
+                _Solve2Thread = new Thread(new ParameterizedThreadStart(SolveThreadFunction));
+                _Solve2Thread.Start(2);
+            }
+            
 
             _DrawingThread = new Thread(DrawThreadFunction);
             _DrawingThread.Start();
@@ -132,11 +142,14 @@ namespace ROKPuzzleSolder.PuzzleSolver
             if (_BoardWindow != null)
                 _BoardWindow.Close();
 
-            if (_SolveThread != null)
-                _SolveThread.Abort();
+            if (_Solve1Thread != null)
+                _Solve1Thread.Join();
+
+            if (_Solve2Thread != null)
+                _Solve2Thread.Join();
 
             if (_DrawingThread != null)
-                _DrawingThread.Abort();
+                _DrawingThread.Join();
 
             _Logger.AddLog("퍼즐 풀기가 중지되었습니다.");
         }
@@ -157,12 +170,17 @@ namespace ROKPuzzleSolder.PuzzleSolver
         // =========================================
 
 
-        private void SolveThreadFunction()
+        private void SolveThreadFunction(object _Index)
         {
             int _CurrentDelay = 0;
             Mat _OriginalBackground = Cv2.ImRead("background.png");
+            int _PieceIdx = (int)_Index;
+
+
             try
             {
+
+
                 while (_IsSolving)
                 {
                     if (_CurrentDelay < ROKPuzzleSolverSetting.SolveDelay)
@@ -172,14 +190,30 @@ namespace ROKPuzzleSolder.PuzzleSolver
                         continue;
                     }
 
+                    OpenCVRect2D _PieceRect = new OpenCVRect2D();
+
+                    switch (_PieceIdx)
+                    {
+                        case 1:
+                            _PieceRect = ROKPuzzleSolverSetting.Piece1Rect;
+                            break;
+                        case 2:
+                            _PieceRect = ROKPuzzleSolverSetting.Piece2Rect;
+                            break;
+                    }
+
+                    if (_PieceRect.IsAvaiableRect() == false)
+                        throw new Exception(_PieceIdx + "번 퍼즐 조각의 영역이 제대로 설정되어 있지 않습니다.");
+
                     //퍼즐 조각 캡쳐
-                    Mat _Piece = ROKPuzzleOpenCV.ScreenToBitmap(ROKPuzzleSolverSetting.PieceRect).ConvertToMat();
+                    Mat _Piece = ROKPuzzleOpenCV.ScreenToBitmap(_PieceRect.ToRectInt()).ConvertToMat();
                     Mat _Background = _OriginalBackground.Clone();
                     Mat _Mask = new Mat();
                     Dispatcher _ControllerDispatcher = _ResultImage.Dispatcher;
 
-                    OpenCVRect _ContourRect = new OpenCVRect();
+                    OpenCVRect2D _ContourRect = new OpenCVRect2D();
                     Mat _BinaryContourMat = null;
+
                     //스케일링
                     if (ROKPuzzleSolverSetting.UsePieceScaling)
                     {
@@ -192,7 +226,7 @@ namespace ROKPuzzleSolder.PuzzleSolver
                         //라오킹 퍼즐이 있는 배경영역의 평균 색값이 240정도로 나오던데 230정도로 잡으면 될듯?
                         if (ROKPuzzleOpenCV.FitToContourRect(_Piece, ROKPuzzleSolverSetting.PieceStandardBinaryThreshold, out _ContourRect, out _BinaryContourMat))
                         {
-                            _Piece = _Piece.SubMat(_ContourRect);
+                            _Piece = _Piece.SubMat(_ContourRect.ToRectInt());
                         }
                     }
 
@@ -221,53 +255,45 @@ namespace ROKPuzzleSolder.PuzzleSolver
                     {
                         Cv2.Threshold(_Piece, _Mask, ROKPuzzleSolverSetting.MaskStandardBinaryThreshold, 255, ThresholdTypes.BinaryInv);
                     }
-                    
-                    _ControllerDispatcher.Invoke(() => _PieceMaskImage.Source = _Mask.ConvertToBitmapSource());
 
-                    if (ROKPuzzleOpenCV.Contains(_Background, _Piece, _Mask, ROKPuzzleSolverSetting.MatchMethod, ROKPuzzleSolverSetting.MinimumMatchValue, ROKPuzzleSolverSetting.MatchSimilarityInterval, out List <MatchTemplateResult> _FindRects))
+                    if (_PieceIdx == 1)
+                        _ControllerDispatcher.Invoke(() => _Piece1MaskImage.Source = _Mask.ConvertToBitmapSource());
+                    else if (_PieceIdx == 2)
+                        _ControllerDispatcher.Invoke(() => _Piece2MaskImage.Source = _Mask.ConvertToBitmapSource());
+
+                    if (ROKPuzzleOpenCV.Contains(_Background, _Piece, _Mask, ROKPuzzleSolverSetting.MatchMethod, ROKPuzzleSolverSetting.MinimumMatchValue, ROKPuzzleSolverSetting.MatchSimilarityInterval, out List<MatchTemplateResult> _FindRects))
                     {
                         _FindRects.Sort((a, b) => a.Similarity.CompareTo(b.Similarity)); //오름차순 정렬
 
                         lock (_SolveThreadLock)
                         {
-                            _Answer = _FindRects.Last();
+                            if (_PieceIdx == 1)
+                                _Answer1 = _FindRects.Last();
+                            else if (_PieceIdx == 2)
+                                _Answer2 = _FindRects.Last();
                         }
-
-                        //Mat _ClonedBacgroundMat = _OriginalBackground.Clone();
-
-                        //for (int i = 0; i < _FindRects.Count - 1; i++)
-                        //{
-                        //    Cv2.Rectangle(_ClonedBacgroundMat, _FindRects[i].Rect.TopLeft, _FindRects[i].Rect.BottomRight, new Scalar(30, 20, 240), 2);
-                        //    Cv2.PutText(_ClonedBacgroundMat, Math.Round(_FindRects[i].Similarity, 2).ToString(), new OpenCVPoint(_FindRects[i].Rect.X, _FindRects[i].Rect.Y + 20), HersheyFonts.HersheyComplexSmall, 1.0, new Scalar(30, 20, 240), 2);
-                        //}
-
-                        //Cv2.Rectangle(_ClonedBacgroundMat, _Answer.Rect.TopLeft, _Answer.Rect.BottomRight, new Scalar(20, 255, 40), 2);
-                        //Cv2.PutText(_ClonedBacgroundMat, Math.Round(_Answer.Similarity, 2).ToString(), new OpenCVPoint(_Answer.Rect.X, _Answer.Rect.Y + 20), HersheyFonts.HersheyComplexSmall, 1.0, new Scalar(20, 255, 40), 2);
-
-                        //_ControllerDispatcher.Invoke(() =>
-                        //{
-                        //    _ResultImage.Source = _ClonedBacgroundMat.ConvertToBitmapSource();
-                        //    _PieceResultImage.Source = _Piece.ConvertToBitmapSource();
-                        //});
                     }
                     else
                     {
                         _Logger.AddLog("찾지 못함");
-                        //찾지 못함
                     }
+
+                    //가비지 컬렉팅
+                    _Piece?.Dispose();
+                    _Background?.Dispose();
+                    _Mask?.Dispose();
+                    _BinaryContourMat?.Dispose();
 
                     _CurrentDelay = 0;
                 }
             }
             catch (Exception _Exception)
             {
-                try
-                {
-                    _ResultImage.Dispatcher.Invoke(() => _ResultImage.Source = _OriginalBackground.ConvertToBitmapSource());
-                    _Logger.AddLog("퍼즐 풀기 쓰레드가 강제 중단되었습니다.");
-                    MessageBox.Show(_Exception.Message + "\n\n" + _Exception.StackTrace);
-                }
-                catch  { }
+                _Logger.AddLog(_PieceIdx + " 번 퍼즐 풀기 쓰레드가 강제 중단되었습니다.");
+            }
+            finally
+            {
+                _OriginalBackground?.Dispose();
             }
         }
 
@@ -277,40 +303,56 @@ namespace ROKPuzzleSolder.PuzzleSolver
 
         private void DrawThreadFunction()
         {
+            Mat _OriginalBackground = Cv2.ImRead("background.png");
+
             try
             {
-                bool _BlinkAnswer = false;
-
                 while (_IsSolving)
                 {
                     if (_BoardWindow == null)
                         continue;
 
-                    _BoardWindow.Clear();
+                    // 그리드 지워주기
+                    Color _Answer1Color = Color.LightGreen;
+                    Color _Answer2Color = Color.LightCyan;
 
-                    _BoardWindow.DrawPuzzleBoard();
+                    _BoardWindow.Dispatcher.Invoke(() =>
+                    {
+                        _BoardWindow.Clear();
+                        _BoardWindow.DrawWhereIsPiece(_Answer1, new SolidBrush(Color.LightGreen));
+                        _BoardWindow.DrawWhereIsPiece(_Answer2, new SolidBrush(Color.LightCyan));
+                        _BoardWindow.Render();
+                    });
 
-                    if (_BlinkAnswer)
+                    Dispatcher _ControllerDispatcher = _ResultImage.Dispatcher;
+
+                    Mat _ClonedBacgroundMat = _OriginalBackground.Clone();
+
+                    if (_Answer1.Rect.IsAvaiableRect())
                     {
-                        _BoardWindow.DrawWhereIsPiece(_Answer, new SolidBrush(Color.Yellow));
-                        _BlinkAnswer = false;
+                        Cv2.Rectangle(_ClonedBacgroundMat, _Answer1.Rect.TopLeft.ToRectInt(), _Answer1.Rect.BottomRight.ToRectInt(), new Scalar(_Answer1Color.R, _Answer1Color.G, _Answer1Color.B), 2);
+                        Cv2.PutText(_ClonedBacgroundMat, Math.Round(_Answer1.Similarity, 2).ToString(), new OpenCVPoint(_Answer1.Rect.X, _Answer1.Rect.Y + 20), HersheyFonts.HersheyComplexSmall, 1.0, new Scalar(_Answer1Color.R, _Answer1Color.G, _Answer1Color.B), 2);
                     }
-                    else
+
+                    if (_Answer2.Rect.IsAvaiableRect())
                     {
-                        _BoardWindow.DrawWhereIsPiece(_Answer, new SolidBrush(Color.FromArgb(0, 0, 0, 0)));
-                        _BlinkAnswer = true;
+                        Cv2.Rectangle(_ClonedBacgroundMat, _Answer2.Rect.TopLeft.ToRectInt(), _Answer2.Rect.BottomRight.ToRectInt(), new Scalar(_Answer2Color.R, _Answer2Color.G, _Answer2Color.B), 2);
+                        Cv2.PutText(_ClonedBacgroundMat, Math.Round(_Answer2.Similarity, 2).ToString(), new OpenCVPoint(_Answer2.Rect.X, _Answer2.Rect.Y + 20), HersheyFonts.HersheyComplexSmall, 1.0, new Scalar(_Answer2Color.R, _Answer2Color.G, _Answer2Color.B), 2);
                     }
+
+                    _ControllerDispatcher.Invoke(() => _ResultImage.Source = _ClonedBacgroundMat.ConvertToBitmapSource());
+                    _ClonedBacgroundMat?.Dispose();
 
                     Thread.Sleep(100);
                 }
             }
             catch (Exception _Exception)
             {
-                try
-                {
-                    _Logger.AddLog("퍼즐 그리기 쓰레드가 강제 중단되었습니다.");
-                }
-                catch { }
+                _Logger.AddLog("퍼즐 그리기 쓰레드가 강제 중단되었습니다.");
+            }
+            finally
+            {
+                _OriginalBackground?.Dispose();
             }
         }
     }

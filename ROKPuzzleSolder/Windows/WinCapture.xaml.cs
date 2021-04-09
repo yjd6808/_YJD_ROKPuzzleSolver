@@ -18,9 +18,9 @@ namespace ROKPuzzleSolder
 {
     public partial class WinCapture : Window
     {
-        public OpenCvSharp.Rect _CapturedRect;
+        public OpenCvSharp.Rect2d _CapturedRect;
 
-        public WinCapture(OpenCvSharp.Rect _Rect)
+        public WinCapture(OpenCvSharp.Rect2d _Rect)
         {
             InitializeComponent();
 
@@ -45,7 +45,7 @@ namespace ROKPuzzleSolder
 
         private void _CSCaptureButton_Click(object sender, RoutedEventArgs e)
         {
-            _CapturedRect = new OpenCvSharp.Rect((int)this.Left, (int)this.Top, (int)this.Width, (int)this.Height);
+            _CapturedRect = new OpenCvSharp.Rect2d(this.Left, this.Top, this.Width, this.Height);
 
             if (_CapturedRect.IsAvaiableRect() == false)
             {

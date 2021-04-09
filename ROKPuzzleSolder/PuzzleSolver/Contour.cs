@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using OpenCvSharp;
 
 using OpenCVSize = OpenCvSharp.Size;
-using OpenCVRect = OpenCvSharp.Rect;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVPoint = OpenCvSharp.Point;
 
 namespace ROKPuzzleSolder.PuzzleSolver

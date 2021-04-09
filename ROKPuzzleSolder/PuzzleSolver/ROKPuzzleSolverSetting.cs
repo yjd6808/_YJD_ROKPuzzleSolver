@@ -10,7 +10,7 @@ using Newtonsoft;
 using Newtonsoft.Json.Linq;
 
 using OpenCVSize = OpenCvSharp.Size;
-using OpenCVRect = OpenCvSharp.Rect;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVPoint = OpenCvSharp.Point;
 using System.IO;
 using System;
@@ -21,8 +21,9 @@ namespace ROKPuzzleSolder.PuzzleSolver
     {
         private static readonly string SaveFileName = "ROKPuzzleSolderSetting.json";
 
-        public static OpenCVRect BackgroundRect;                   //퍼즐 완성본 검출 영역
-        public static OpenCVRect PieceRect;                        //퍼즐 조각 검출 영역
+        public static OpenCVRect2D BackgroundRect;                 //퍼즐 완성본 검출 영역
+        public static OpenCVRect2D Piece1Rect;                     //1 퍼즐 조각 검출 영역
+        public static OpenCVRect2D Piece2Rect;                     //2 퍼즐 조각 검출 영역
 
         public static TemplateMatchModes MatchMethod;              //매칭 방식
         public static double PieceStandardBinaryThreshold;         //퍼즐 조각 이진화 기준 임계값
@@ -41,8 +42,9 @@ namespace ROKPuzzleSolder.PuzzleSolver
         //초기 설정
         public static void Initialize()
         {
-            BackgroundRect = new OpenCVRect(0, 0, 0, 0);
-            PieceRect = new OpenCVRect(0, 0, 0, 0);
+            BackgroundRect = new OpenCVRect2D(0, 0, 0, 0);
+            Piece1Rect = new OpenCVRect2D(0, 0, 0, 0);
+            Piece2Rect = new OpenCVRect2D(0, 0, 0, 0);
 
             MatchMethod = TemplateMatchModes.CCoeffNormed;
             PieceStandardBinaryThreshold = 200;
@@ -51,7 +53,7 @@ namespace ROKPuzzleSolder.PuzzleSolver
             MinimumMatchValue = 0.2;
             FitImageWithContour = true;
             UsePieceScaling = true;
-            PieceScale = 1.36;
+            PieceScale = 1.374;
             SolveDelay = 240;
 
             MaskStandardBinaryThreshold = 125;
@@ -70,10 +72,15 @@ namespace ROKPuzzleSolder.PuzzleSolver
                 _Root.Add("background_rect_width", BackgroundRect.Width);
                 _Root.Add("background_rect_height", BackgroundRect.Height);
 
-                _Root.Add("piece_rect_x", PieceRect.X);
-                _Root.Add("piece_rect_y", PieceRect.Y);
-                _Root.Add("piece_rect_width", PieceRect.Width);
-                _Root.Add("piece_rect_height", PieceRect.Height);
+                _Root.Add("piece_1_rect_x", Piece1Rect.X);
+                _Root.Add("piece_1_rect_y", Piece1Rect.Y);
+                _Root.Add("piece_1_rect_width", Piece1Rect.Width);
+                _Root.Add("piece_1_rect_height", Piece1Rect.Height);
+
+                _Root.Add("piece_2_rect_x", Piece2Rect.X);
+                _Root.Add("piece_2_rect_y", Piece2Rect.Y);
+                _Root.Add("piece_2_rect_width", Piece2Rect.Width);
+                _Root.Add("piece_2_rect_height", Piece2Rect.Height);
 
                 _Root.Add("match_method", (int)MatchMethod);
                 _Root.Add("piece_standard_binary_threshold", PieceStandardBinaryThreshold);
@@ -117,10 +124,15 @@ namespace ROKPuzzleSolder.PuzzleSolver
                 BackgroundRect.Width = int.Parse(_Root["background_rect_width"].ToString());
                 BackgroundRect.Height = int.Parse(_Root["background_rect_height"].ToString());
 
-                PieceRect.X = int.Parse(_Root["piece_rect_x"].ToString());
-                PieceRect.Y = int.Parse(_Root["piece_rect_y"].ToString());
-                PieceRect.Width = int.Parse(_Root["piece_rect_width"].ToString());
-                PieceRect.Height = int.Parse(_Root["piece_rect_height"].ToString());
+                Piece1Rect.X = int.Parse(_Root["piece_1_rect_x"].ToString());
+                Piece1Rect.Y = int.Parse(_Root["piece_1_rect_y"].ToString());
+                Piece1Rect.Width = int.Parse(_Root["piece_1_rect_width"].ToString());
+                Piece1Rect.Height = int.Parse(_Root["piece_1_rect_height"].ToString());
+
+                Piece2Rect.X = int.Parse(_Root["piece_2_rect_x"].ToString());
+                Piece2Rect.Y = int.Parse(_Root["piece_2_rect_y"].ToString());
+                Piece2Rect.Width = int.Parse(_Root["piece_2_rect_width"].ToString());
+                Piece2Rect.Height = int.Parse(_Root["piece_2_rect_height"].ToString());
 
                 MatchMethod = (TemplateMatchModes)int.Parse(_Root["match_method"].ToString());
                 PieceStandardBinaryThreshold = double.Parse(_Root["piece_standard_binary_threshold"].ToString());

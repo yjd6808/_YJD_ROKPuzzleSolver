@@ -5,17 +5,17 @@
 // ===============================
 
 using OpenCVSize = OpenCvSharp.Size;
-using OpenCVRect = OpenCvSharp.Rect;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVPoint = OpenCvSharp.Point;
 
 namespace ROKPuzzleSolder.PuzzleSolver
 {
     public struct MatchTemplateResult
     {
-        public OpenCVRect Rect;
+        public OpenCVRect2D Rect;
         public double Similarity;
 
-        public MatchTemplateResult(OpenCVRect _Rect, double _Sim)
+        public MatchTemplateResult(OpenCVRect2D _Rect, double _Sim)
         {
             Rect = _Rect;
             Similarity = _Sim;

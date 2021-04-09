@@ -15,7 +15,7 @@ using System.Windows.Shapes;
 using ROKPuzzleSolder.PuzzleSolver;
 
 using OpenCVSize = OpenCvSharp.Size;
-using OpenCVRect = OpenCvSharp.Rect;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVPoint = OpenCvSharp.Point;
 using OpenCvSharp;
 using System.IO;
@@ -32,23 +32,33 @@ namespace ROKPuzzleSolder
         private static readonly string RectWidthLabelString = "영역 너비 : ";
         private static readonly string RectHeightLabelString = "영역 높이 : ";
 
-        private static readonly string ImageWidthString = "이미지 너비 : ";
-        private static readonly string ImageHeightString = "이미지 높이 : ";
+        private static readonly string Piece1RectXLabelString = "1 영역 X 좌표 : ";
+        private static readonly string Piece1RectYLabelString = "1 영역 Y 좌표 : ";
+        private static readonly string Piece1RectWidthLabelString = "1 영역 너비 : ";
+        private static readonly string Piece1RectHeightLabelString = "1 영역 높이 : ";
 
-        private OpenCVRect _BackgroundRect;
-        private OpenCVRect _PieceRect;
+        private static readonly string Piece2RectXLabelString = "2 영역 X 좌표 : ";
+        private static readonly string Piece2RectYLabelString = "2 영역 Y 좌표 : ";
+        private static readonly string Piece2RectWidthLabelString = "2 영역 너비 : ";
+        private static readonly string Piece2RectHeightLabelString = "2 영역 높이 : ";
+
+
+
+        private OpenCVRect2D _BackgroundRect;
+        private OpenCVRect2D _Piece1Rect;
+        private OpenCVRect2D _Piece2Rect;
 
         private Mat _BackgroundMat;
-        private Mat _PieceMat;
+        private Mat _Piece1Mat;
+        private Mat _Piece2Mat;
 
         public WinSetting()
         {
             InitializeComponent();
 
-            SetVisibleStatusBackgroundImageLabels(false);
-            SetVisibleStatusPieceImageLabels(false);
             SetVisibleStatusBackgroundLabels(false);
-            SetVisibleStatusPieceLabels(false);
+            SetVisibleStatusPiece1Labels(false);
+            SetVisibleStatusPiece2Labels(false);
 
             if (ROKPuzzleSolverSetting.BackgroundRect.IsAvaiableRect())
             {
@@ -62,16 +72,28 @@ namespace ROKPuzzleSolder
                 _BackgroundRect = ROKPuzzleSolverSetting.BackgroundRect;
             }
 
-            if (ROKPuzzleSolverSetting.PieceRect.IsAvaiableRect())
+            if (ROKPuzzleSolverSetting.Piece1Rect.IsAvaiableRect())
             {
-                SetVisibleStatusPieceLabels(true);
+                SetVisibleStatusPiece1Labels(true);
 
-                _WSPieceRectXLabel.Content = RectXLabelString + ROKPuzzleSolverSetting.PieceRect.X;
-                _WSPieceRectYLabel.Content = RectYLabelString + ROKPuzzleSolverSetting.PieceRect.Y;
-                _WSPieceRectWithLabel.Content = RectWidthLabelString + ROKPuzzleSolverSetting.PieceRect.Width;
-                _WSPieceRectHeightLabel.Content = RectHeightLabelString + ROKPuzzleSolverSetting.PieceRect.Height;
+                _WSPiece1RectXLabel.Content = Piece1RectXLabelString + ROKPuzzleSolverSetting.Piece1Rect.X;
+                _WSPiece1RectYLabel.Content = Piece1RectYLabelString + ROKPuzzleSolverSetting.Piece1Rect.Y;
+                _WSPiece1RectWithLabel.Content = Piece1RectWidthLabelString + ROKPuzzleSolverSetting.Piece1Rect.Width;
+                _WSPiece1RectHeightLabel.Content = Piece1RectHeightLabelString + ROKPuzzleSolverSetting.Piece1Rect.Height;
 
-                _PieceRect = ROKPuzzleSolverSetting.PieceRect;
+                _Piece1Rect = ROKPuzzleSolverSetting.Piece1Rect;
+            }
+
+            if (ROKPuzzleSolverSetting.Piece2Rect.IsAvaiableRect())
+            {
+                SetVisibleStatusPiece2Labels(true);
+
+                _WSPiece2RectXLabel.Content = Piece2RectXLabelString + ROKPuzzleSolverSetting.Piece2Rect.X;
+                _WSPiece2RectYLabel.Content = Piece2RectYLabelString + ROKPuzzleSolverSetting.Piece2Rect.Y;
+                _WSPiece2RectWithLabel.Content = Piece2RectWidthLabelString + ROKPuzzleSolverSetting.Piece2Rect.Width;
+                _WSPiece2RectHeightLabel.Content = Piece2RectHeightLabelString + ROKPuzzleSolverSetting.Piece2Rect.Height;
+
+                _Piece2Rect = ROKPuzzleSolverSetting.Piece2Rect;
             }
 
             _WSMatchingMethodsComboBox.SelectedIndex = (int)ROKPuzzleSolverSetting.MatchMethod;
@@ -121,9 +143,15 @@ namespace ROKPuzzleSolder
                 return;
             }
 
-            if (_PieceRect.IsAvaiableRect() == false)
+            if (_Piece1Rect.IsAvaiableRect() == false)
             {
-                MessageBox.Show("조각 영역이 설정되지 않았습니다.");
+                MessageBox.Show("조각 1 영역이 설정되지 않았습니다.");
+                return;
+            }
+
+            if (_Piece2Rect.IsAvaiableRect() == false)
+            {
+                MessageBox.Show("조각 2 영역이 설정되지 않았습니다.");
                 return;
             }
 
@@ -279,7 +307,8 @@ namespace ROKPuzzleSolder
             }
 
             ROKPuzzleSolverSetting.BackgroundRect = _BackgroundRect;
-            ROKPuzzleSolverSetting.PieceRect = _PieceRect;
+            ROKPuzzleSolverSetting.Piece1Rect = _Piece1Rect;
+            ROKPuzzleSolverSetting.Piece2Rect = _Piece2Rect;
 
             ROKPuzzleSolverSetting.MatchMethod = (TemplateMatchModes)_WSMatchingMethodsComboBox.SelectedIndex;
             ROKPuzzleSolverSetting.PieceStandardBinaryThreshold = _PieceStandardBinaryThreshold;
@@ -315,25 +344,22 @@ namespace ROKPuzzleSolder
             _WSBackgroundRectHeightLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
         }
 
-        private void SetVisibleStatusPieceLabels(bool _IsVisible)
+        private void SetVisibleStatusPiece1Labels(bool _IsVisible)
         {
-            _WSPieceRectXLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
-            _WSPieceRectYLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
-            _WSPieceRectWithLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
-            _WSPieceRectHeightLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece1RectXLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece1RectYLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece1RectWithLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece1RectHeightLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
         }
 
-        private void SetVisibleStatusBackgroundImageLabels(bool _IsVisible)
+        private void SetVisibleStatusPiece2Labels(bool _IsVisible)
         {
-            _WSBackgroundImageWidthLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
-            _WSBackgroundImageHeightLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece2RectXLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece2RectYLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece2RectWithLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
+            _WSPiece2RectHeightLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
         }
 
-        private void SetVisibleStatusPieceImageLabels(bool _IsVisible)
-        {
-            _WSPieceImageWidthLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
-            _WSPieceImageHeightLabel.Visibility = (Visibility)Convert.ToInt32(!_IsVisible);
-        }
 
         private void _WSSetBackgroundRectButton_Click(object sender, RoutedEventArgs e)
         {
@@ -357,20 +383,20 @@ namespace ROKPuzzleSolder
 
         private void _WSSettPieceRectButton_Click(object sender, RoutedEventArgs e)
         {
-            WinCapture _CaptureWindow = new WinCapture(_PieceRect);
+            WinCapture _CaptureWindow = new WinCapture(_Piece1Rect);
 
             if (_CaptureWindow.ShowDialog().Value)
             {
-                _PieceRect = _CaptureWindow._CapturedRect;
+                _Piece1Rect = _CaptureWindow._CapturedRect;
 
-                if (_PieceRect.IsAvaiableRect())
+                if (_Piece1Rect.IsAvaiableRect())
                 {
-                    SetVisibleStatusPieceLabels(true);
+                    SetVisibleStatusPiece1Labels(true);
 
-                    _WSPieceRectXLabel.Content = RectXLabelString + _PieceRect.X;
-                    _WSPieceRectYLabel.Content = RectYLabelString + _PieceRect.Y;
-                    _WSPieceRectWithLabel.Content = RectWidthLabelString + _PieceRect.Width;
-                    _WSPieceRectHeightLabel.Content = RectHeightLabelString + _PieceRect.Height;
+                    _WSPiece1RectXLabel.Content = Piece1RectXLabelString + _Piece1Rect.X;
+                    _WSPiece1RectYLabel.Content = Piece1RectYLabelString + _Piece1Rect.Y;
+                    _WSPiece1RectWithLabel.Content = Piece1RectWidthLabelString + _Piece1Rect.Width;
+                    _WSPiece1RectHeightLabel.Content = Piece1RectHeightLabelString + _Piece1Rect.Height;
                 }
             }
         }
@@ -383,30 +409,20 @@ namespace ROKPuzzleSolder
                 return;
             }
 
-            _BackgroundMat = ROKPuzzleOpenCV.ScreenToMat(_BackgroundRect);
+            _BackgroundMat = ROKPuzzleOpenCV.ScreenToMat(_BackgroundRect.ToRectInt());
             _WSBackgroundImage.Source = _BackgroundMat.ConvertToBitmapSource();
-
-            SetVisibleStatusBackgroundImageLabels(true);
-
-            _WSBackgroundImageWidthLabel.Content = ImageWidthString + _BackgroundMat.Width;
-            _WSBackgroundImageHeightLabel.Content = ImageHeightString + _BackgroundMat.Height;
         }
 
         private void _WSCapturePieceRectButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_PieceRect.IsAvaiableRect() == false)
+            if (_Piece1Rect.IsAvaiableRect() == false)
             {
-                MessageBox.Show("조각 캡쳐 영역을 우선 지정해주세요!");
+                MessageBox.Show("1 조각 캡쳐 영역을 우선 지정해주세요!");
                 return;
             }
 
-            _PieceMat = ROKPuzzleOpenCV.ScreenToMat(_PieceRect);
-            _WSPieceImage.Source = _PieceMat.ConvertToBitmapSource();
-
-            SetVisibleStatusPieceImageLabels(true);
-
-            _WSPieceImageWidthLabel.Content = ImageWidthString + _PieceMat.Width;
-            _WSPieceImageHeightLabel.Content = ImageHeightString + _PieceMat.Height;
+            _Piece1Mat = ROKPuzzleOpenCV.ScreenToMat(_Piece1Rect.ToRectInt());
+            _WSPiece1Image.Source = _Piece1Mat.ConvertToBitmapSource();
         }
 
         private void _WSShowBackgroundImageButton_Click(object sender, RoutedEventArgs e)
@@ -423,13 +439,18 @@ namespace ROKPuzzleSolder
 
         private void _WSShowPieceImageButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_PieceMat == null)
+            if (_Piece1Mat == null)
             {
-                MessageBox.Show("조각을 우선 캡쳐해주세요!");
+                MessageBox.Show("1 조각을 우선 캡쳐해주세요!");
                 return;
             }
 
-            Cv2.ImShow("Piece", _PieceMat);
+
+            Cv2.ImShow("Piece 1", _Piece1Mat);
+
+            if (_Piece2Mat != null)
+                Cv2.ImShow("Piece 2", _Piece2Mat);
+
             Cv2.WaitKey(0);
         }
 
@@ -450,6 +471,38 @@ namespace ROKPuzzleSolder
                 Cv2.ImWrite("background.png", _BackgroundMat);
 
             MessageBox.Show("저장을 완료했습니다.");
+        }
+
+        private void _WSSettPiece2RectButton_Click(object sender, RoutedEventArgs e)
+        {
+            WinCapture _CaptureWindow = new WinCapture(_Piece2Rect);
+
+            if (_CaptureWindow.ShowDialog().Value)
+            {
+                _Piece2Rect = _CaptureWindow._CapturedRect;
+
+                if (_Piece2Rect.IsAvaiableRect())
+                {
+                    SetVisibleStatusPiece2Labels(true);
+
+                    _WSPiece2RectXLabel.Content = Piece2RectXLabelString + _Piece2Rect.X;
+                    _WSPiece2RectYLabel.Content = Piece2RectYLabelString + _Piece2Rect.Y;
+                    _WSPiece2RectWithLabel.Content = Piece2RectWidthLabelString + _Piece2Rect.Width;
+                    _WSPiece2RectHeightLabel.Content = Piece2RectHeightLabelString + _Piece2Rect.Height;
+                }
+            }
+        }
+
+        private void _WSCapturePiece2RectButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_Piece2Rect.IsAvaiableRect() == false)
+            {
+                MessageBox.Show("2 조각 캡쳐 영역을 우선 지정해주세요!");
+                return;
+            }
+
+            _Piece2Mat = ROKPuzzleOpenCV.ScreenToMat(_Piece2Rect.ToRectInt());
+            _WSPiece2Image.Source = _Piece2Mat.ConvertToBitmapSource();
         }
     }
 }

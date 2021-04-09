@@ -16,7 +16,7 @@ using System.Linq;
 using System.Windows.Media.Imaging;
 
 using OpenCVSize = OpenCvSharp.Size;
-using OpenCVRect = OpenCvSharp.Rect;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVPoint = OpenCvSharp.Point;
 
 
@@ -99,7 +99,7 @@ namespace ROKPuzzleSolder.PuzzleSolver
             return _Src.Clone().Resize(new OpenCVSize(_Width, _Height), 0, 0, _Flag);
         }
 
-        public static OpenCVPoint GetRectCenter(OpenCVRect _Rect)
+        public static OpenCVPoint GetRectCenter(OpenCVRect2D _Rect)
         {
             return new OpenCVPoint(_Rect.X + _Rect.Width / 2, _Rect.Y + _Rect.Height / 2);
         }
@@ -109,35 +109,47 @@ namespace ROKPuzzleSolder.PuzzleSolver
         //  @ 인자1 : 점들의 정보가 담긴 리스트
         // =========================================
 
-        public static OpenCVRect GetBoundingBoxPoints(IEnumerable<OpenCVPoint> _Points)
+        public static OpenCVRect2D GetBoundingBoxPoints(List<OpenCVPoint> _Points)
         {
-            _Points = _Points.OrderBy((a) => a.X);
+            _Points.Sort((a, b) => a.X.CompareTo(b.X));
 
             int _X = _Points.First().X;
             int _Width = _Points.Last().X - _X;
 
-            _Points = _Points.OrderBy((a) => a.Y);
+            _Points.Sort((a, b) => a.Y.CompareTo(b.Y));
 
             int _Y = _Points.First().Y;
             int _Height = _Points.Last().Y - _Y;
 
-            return new OpenCVRect(_X, _Y, _Width, _Height);
+            return new OpenCVRect2D(_X, _Y, _Width, _Height);
         }
 
-        public static OpenCVRect GetBoundingBoxRects(IEnumerable<OpenCVRect> _Rects)
+        // =========================================
+        //  인자로 받은 사각영역을 모두 아우르는 크기의 사각영역 구하기
+        //  @ 인자1 : 점들의 정보가 담긴 리스트
+        // =========================================
+
+        public static OpenCVRect2D GetBoundingBoxRects(List<OpenCVRect2D> _Rects)
         {
-            _Rects = _Rects.OrderBy((a) => a.X);
+            _Rects.Sort((a, b) => a.X.CompareTo(b.X));
 
-            int _X = _Rects.First().X;
-            int _Width = _Rects.Last().X + _Rects.Last().Width - _X;
+            double _X = _Rects.First().X;
 
-            _Rects = _Rects.OrderBy((a) => a.Y);
+            _Rects.Sort((a, b) => (a.X + a.Width).CompareTo(b.X + b.Width));
 
-            int _Y = _Rects.First().Y;
-            int _Height = _Rects.Last().Y + _Rects.Last().Height - _Y;
+            double _Width = _Rects.Last().X + _Rects.Last().Width - _X;
 
-            return new OpenCVRect(_X, _Y, _Width, _Height);
+            _Rects.Sort((a, b) => a.Y.CompareTo(b.Y));
+
+            double _Y = _Rects.First().Y;
+
+            _Rects.Sort((a, b) => (a.Y + a.Height).CompareTo(b.Y + b.Height));
+
+            double _Height = _Rects.Last().Y + _Rects.Last().Height - _Y;
+
+            return new OpenCVRect2D(_X, _Y, _Width, _Height);
         }
+
 
         // =========================================
         //  윤곽선들 중 길이가 가장 긴 윤곽선의 사각 영역 정보 가져오기
@@ -148,9 +160,9 @@ namespace ROKPuzzleSolder.PuzzleSolver
         //  1. 가장 형태가 뚜렷한 윤곽선을 가져옵니다.(가장 점이 많은 윤곽선)
         //  2. 윤곽선의 X 점들을 오름차순으로 정렬하여 좌측 상단의 X좌표와 사각 영역의 너비를 계산한다.
         //  3. 윤곽선의 Y 점들을 오름차순으로 정렬하여 좌측 상단의 Y좌표와 사각 영역의 높이를 계산한다.
-        private static OpenCVRect GetContourRectLogestOne(IEnumerable<Contour> _ContoursList)
+        private static OpenCVRect2D GetContourRectLogestOne(IEnumerable<Contour> _ContoursList)
         {
-            return GetBoundingBoxPoints(_ContoursList.OrderByDescending(x => x.ArcLength).First().Points);
+            return GetBoundingBoxPoints(_ContoursList.OrderByDescending(x => x.ArcLength).First().Points.ToList());
         }
 
 
@@ -159,18 +171,19 @@ namespace ROKPuzzleSolder.PuzzleSolver
         //  @ 인자1 : 윤곽선을 이루는 점들의 정보가 담긴 리스트
         //  @ 인자2 : 몇개의 사각형 정보를 가져올 지
         // =========================================
-        private static List<OpenCVRect> GetContourRects(IEnumerable<Contour> _ContoursList, int _ReturnCount)
+        private static List<OpenCVRect2D> GetContourRects(List<Contour> _ContoursList, int _ReturnCount)
         {
             int _Count = _ContoursList.Count();
 
             if (_ReturnCount > _Count)
                 _ReturnCount = _Count;
 
-            List<OpenCVRect> _ContourRects = new List<OpenCVRect>();
+            List<OpenCVRect2D> _ContourRects = new List<OpenCVRect2D>();
 
-            _ContoursList.OrderByDescending(x => x.ArcLength).ForEach(x => _ContourRects.Add(GetBoundingBoxPoints(x.Points)));
+            _ContoursList
+                .OrderByDescending(x => x.ArcLength)
+                .ForEach(x => _ContourRects.Add(GetBoundingBoxPoints(x.Points.ToList())));
 
-            //쓸일이 있으면 만들자.
             return _ContourRects;
         }
 
@@ -181,9 +194,9 @@ namespace ROKPuzzleSolder.PuzzleSolver
         //  @ 인자3 : 윤곽선의 영역만큼 원본 이미지에서 잘라진 이진화 처리된 이미지
         // =========================================
 
-        public static bool FitToContourRect(Mat _Src, double _StandardBinaryThreshold, out OpenCVRect _Rect, out Mat _BinaryContourMat)
+        public static bool FitToContourRect(Mat _Src, double _StandardBinaryThreshold, out OpenCVRect2D _Rect, out Mat _BinaryContourMat)
         {
-            _Rect = new OpenCVRect(0, 0, 0, 0);
+            _Rect = new OpenCVRect2D(0, 0, 0, 0);
             _BinaryContourMat = null;
 
             try
@@ -236,8 +249,12 @@ namespace ROKPuzzleSolder.PuzzleSolver
 
                 //Cv2.DrawContours(dst, new_contours, -1, new Scalar(255, 0, 0), 2, LineTypes.AntiAlias, null, 1); //윤곽선 그리기
 
-                _Rect = GetContourRectLogestOne(_ContoursList); //GetBoundingBoxRects(GetContourRects(_ContoursList, 3)); //윤곽선의 영역에 맞게 크기 조절
-                _BinaryContourMat = _ClonedSource.SubMat(_Rect);
+                _Rect = GetBoundingBoxRects(GetContourRects(_ContoursList, 3)); //GetBoundingBoxRects(GetContourRects(_ContoursList, 3)); //윤곽선의 영역에 맞게 크기 조절
+                _BinaryContourMat = _ClonedSource.SubMat(_Rect.ToRectInt());
+
+                //가비지 컬렉팅
+                _ClonedSource?.Dispose();
+
                 return true;
             }
             catch (Exception _Exception)
@@ -253,13 +270,10 @@ namespace ROKPuzzleSolder.PuzzleSolver
         // =========================================
         //  흑 백으로만 구성된 마스크 이미지 내의 흑 또는 백에 해당하는 영역에만 점을 생성
         //  @ 인자1 : 흑 백으로만 구성된 마스크 이미지
-        //  @ 인자2 : 인정하는 색 - 흑 또는 백 (1 = 백 / 그 외의 수 = 흑)
+        //  @ 인자2 : 인정하는 색 -> 흑 또는 백 (0 = 백 / 그 외의 수 = 흑)
         //  @ 인자3 : 랜덤으로 가져올 점의 갯수
         //  @ 인자4 : 연속으로 유효한 색의 영역에 점이 생성되지 않는 최대 횟수
         // =========================================
-
-
-
         public static bool GetRandomPointsInBinaryImage(Mat _BlackAndWhiteBinaryMask, BlackOrWhite _BlackOrWhite, int _PointCount, int _ContinuousFailCount, out List<OpenCVPoint> _RandomPoints)
         {
             Random _RandomGenerator = new Random();
@@ -328,10 +342,12 @@ namespace ROKPuzzleSolder.PuzzleSolver
                     _StartSimilarity = 1 - _StartSimilarity;
 
                 // 결과 이미지 행렬 구성
-                int _ResultCols = _Src.Cols - _Partition.Cols + 1;
-                int _ResultRows = _Src.Rows - _Partition.Rows + 1;
+                //int _ResultCols = _Src.Cols - _Partition.Cols + 1;
+                //int _ResultRows = _Src.Rows - _Partition.Rows + 1;
 
-                Mat _Result = new Mat(_ResultCols, _ResultRows, MatType.CV_32FC1);
+                //Mat _Result = new Mat(_ResultCols, _ResultRows, MatType.CV_32FC1);
+
+                Mat _Result = new Mat();
 
                 //   포함된 이미지 검출
                 _Result = _Src.MatchTemplate(_Partition, _MatchMethod, _Mask);
@@ -354,7 +370,7 @@ namespace ROKPuzzleSolder.PuzzleSolver
 
                             if (_Similarity < _StartSimilarity)
                             {
-                                _FindRects.Add(new MatchTemplateResult(new OpenCVRect(j, i, _Partition.Width, _Partition.Height), _Similarity));
+                                _FindRects.Add(new MatchTemplateResult(new OpenCVRect2D(j, i, _Partition.Width, _Partition.Height), _Similarity));
                                 _StartSimilarity -= _SimilarityInterval;
                             }
                         }
@@ -365,12 +381,16 @@ namespace ROKPuzzleSolder.PuzzleSolver
 
                             if (_Similarity > _StartSimilarity)
                             {
-                                _FindRects.Add(new MatchTemplateResult(new OpenCVRect(j, i, _Partition.Width, _Partition.Height), _Similarity));
+                                _FindRects.Add(new MatchTemplateResult(new OpenCVRect2D(j, i, _Partition.Width, _Partition.Height), _Similarity));
                                 _StartSimilarity += _SimilarityInterval;
                             }
                         }
                     }
                 }
+
+                //가비지 컬렉팅
+                _Result?.Dispose();
+
 
                 if (_FindRects.Count == 0)
                     return false;

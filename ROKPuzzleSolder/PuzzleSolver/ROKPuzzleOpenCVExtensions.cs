@@ -16,8 +16,11 @@ using System.Threading.Tasks;
 using System.Windows.Media.Imaging;
 
 using OpenCVSize = OpenCvSharp.Size;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVRect = OpenCvSharp.Rect;
 using OpenCVPoint = OpenCvSharp.Point;
+using OpenCVPoint2D = OpenCvSharp.Point2d;
+using System.Windows;
 
 namespace ROKPuzzleSolder.PuzzleSolver
 {
@@ -27,12 +30,21 @@ namespace ROKPuzzleSolder.PuzzleSolver
 
         public static BitmapSource ConvertToBitmapSource(this Bitmap _Bitmap)
         {
-            return System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
-                _Bitmap.GetHbitmap(),
+            IntPtr _BitmapHandle = _Bitmap.GetHbitmap();
+
+            BitmapSource _BitmapSource = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                _BitmapHandle,
                 IntPtr.Zero,
-                System.Windows.Int32Rect.Empty,
-                BitmapSizeOptions.FromEmptyOptions());
+                Int32Rect.Empty,
+                System.Windows.Media.Imaging.BitmapSizeOptions.FromEmptyOptions());
+
+            Win32Helper.Method.DeleteObject(_BitmapHandle); //기존 비트맵 해제
+
+            return _BitmapSource;
         }
+
+
+
 
         public static Mat ConvertToMat(this Bitmap _Bitmap)
         {
@@ -49,16 +61,27 @@ namespace ROKPuzzleSolder.PuzzleSolver
             return ConvertToBitmapSource(BitmapConverter.ToBitmap(_Src));
         }
 
-        public static OpenCVPoint GetRandomPointInRect(this OpenCVRect _Rect)
-        {
-            return new OpenCVPoint(
-                _Rect.X + _Random.Next(0, _Rect.Width), 
-                _Rect.Y + _Random.Next(0, _Rect.Height));
-        }
-
-        public static bool IsAvaiableRect(this OpenCVRect _Rect)
+      
+        public static bool IsAvaiableRect(this OpenCVRect2D _Rect)
         {
             return _Rect.Width > 1 && _Rect.Height > 1;
+        }
+
+  
+        public static OpenCVRect ToRectInt(this OpenCVRect2D _Rect2D)
+        {
+            return new OpenCVRect(
+                (int)Math.Round(_Rect2D.X, 0), 
+                (int)Math.Round(_Rect2D.Y, 0), 
+                (int)Math.Round(_Rect2D.Width, 0), 
+                (int)Math.Round(_Rect2D.Height, 0));
+        }
+
+        public static OpenCVPoint ToRectInt(this OpenCVPoint2D _Point2D)
+        {
+            return new OpenCVPoint(
+                (int)Math.Round(_Point2D.X, 0),
+                (int)Math.Round(_Point2D.Y, 0));
         }
     }
 }

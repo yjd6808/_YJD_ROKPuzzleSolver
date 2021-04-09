@@ -20,7 +20,7 @@ using ROKPuzzleSolder.PuzzleSolver;
 using OpenCvSharp;
 
 using OpenCVSize = OpenCvSharp.Size;
-using OpenCVRect = OpenCvSharp.Rect;
+using OpenCVRect2D = OpenCvSharp.Rect2d;
 using OpenCVPoint = OpenCvSharp.Point;
 using WPFImage = System.Windows.Controls.Image;
 using WPFWindow = System.Windows.Window;
@@ -38,7 +38,7 @@ namespace ROKPuzzleSolder
 
             _Solver = ROKPuzzleSolver.GetInstance();
             _Solver.InitializeLogger(_WMListBox);
-            _Solver.InitializeImageControl(_WMImage, _WMPieceImage, _WMPieceMaskImage);
+            _Solver.InitializeImageControl(_WMImage, _WMPiece1MaskImage, _WMPiece2MaskImage);
             _Solver.InitializeSetting();
         }
 
@@ -81,7 +81,6 @@ namespace ROKPuzzleSolder
             }
         }
 
-        private delegate void AA();
         private void _WMStartButton_Click(object sender, RoutedEventArgs e)
         {
 
@@ -102,7 +101,7 @@ namespace ROKPuzzleSolder
         private void _WMDrawButton_Click(object sender, RoutedEventArgs e)
         {
             //Mat _Piece = new Mat("piece.png");
-            //OpenCVRect _ContourRect = new OpenCVRect();
+            //OpenCVRect2D _ContourRect = new OpenCVRect2D();
             //Mat _BinaryContourMat = null;
             //List<OpenCVPoint> _RandPoints = new List<OpenCVPoint>();
 

@@ -39,40 +39,46 @@
                         <Label x:Name="_WSBackgroundRectWithLabel" Content="영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
                         <Label x:Name="_WSBackgroundRectHeightLabel" Content="영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
                         <Separator />
-                        <Label x:Name="_WSBackgroundImageWidthLabel" Content="이미지 너비 : 10" Margin="5, 0, 0, 0"></Label>
-                        <Label x:Name="_WSBackgroundImageHeightLabel" Content="이미지 높이 : 10" Margin="5, 0, 0, 0"></Label>
                     </StackPanel>
                 </Border>
             </Grid>
             
             <Grid Margin="0, 10, 0, 0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="200"></ColumnDefinition>
+                    <ColumnDefinition Width="100"></ColumnDefinition>
+                    <ColumnDefinition Width="100"></ColumnDefinition>
+                    <ColumnDefinition Width="120"></ColumnDefinition>
                     <ColumnDefinition Width="120"></ColumnDefinition>
                     <ColumnDefinition Width="120"></ColumnDefinition>
                 </Grid.ColumnDefinitions>
-                <Button x:Name="_WSSettPieceRectButton" Grid.Column="0" Margin="10, 0, 0, 0" Content="조각 검출 영역 설정" Click="_WSSettPieceRectButton_Click"></Button>
-                <Button x:Name="_WSCapturePieceRectButton" Grid.Column="1" Margin="10, 0, 0, 0" Content="조각 캡쳐" Click="_WSCapturePieceRectButton_Click"></Button>
-                <Button x:Name="_WSShowPieceImageButton" Grid.Column="2" Margin="10, 0, 0, 0" Content="원본 보기" Click="_WSShowPieceImageButton_Click"></Button>
+                <Button x:Name="_WSSetPiece1RectButton" Grid.Column="0" Margin="10, 0, 0, 0" Content="조각 1" Click="_WSSettPieceRectButton_Click"></Button>
+                <Button x:Name="_WSSetPiece2RectButton" Grid.Column="1" Margin="10, 0, 0, 0" Content="조각 2" Click="_WSSettPiece2RectButton_Click"></Button>
+                <Button x:Name="_WSCapturePiece1RectButton" Grid.Column="2" Margin="10, 0, 0, 0" Content="조각 1 캡쳐" Click="_WSCapturePieceRectButton_Click"></Button>
+                <Button x:Name="_WSCapturePiece2RectButton" Grid.Column="3" Margin="10, 0, 0, 0" Content="조각 2 캡쳐" Click="_WSCapturePiece2RectButton_Click" VerticalAlignment="Top"></Button>
+                <Button x:Name="_WSShowPieceImageButton" Grid.Column="4" Margin="10, 0, 0, 0" Content="원본 보기" Click="_WSShowPieceImageButton_Click"></Button>
             </Grid>
             
             <Grid Margin="10, 10, 10, 0" Background="Beige">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
                     <ColumnDefinition Width="*"></ColumnDefinition>
                 </Grid.ColumnDefinitions>
 
-                <Image x:Name="_WSPieceImage" Grid.Column="0" Stretch="Fill" Height="200"/>
+                <Image x:Name="_WSPiece1Image" Grid.Column="0" Stretch="Fill" Height="200"/>
+                <Image x:Name="_WSPiece2Image" Grid.Column="1" Stretch="Fill" Height="200"/>
 
-                <Border Grid.Column="1" Background="AliceBlue" BorderBrush="Black" BorderThickness="1">
+                <Border Grid.Column="2" Background="AliceBlue" BorderBrush="Black" BorderThickness="1">
                     <StackPanel Grid.Column="1">
-                        <Label x:Name="_WSPieceRectXLabel" Content="영역 X 좌표 : 10" Margin="5, 0, 0, 0"></Label>
-                        <Label x:Name="_WSPieceRectYLabel" Content="영역 Y 좌표 : 10" Margin="5, 0, 0, 0"></Label>
-                        <Label x:Name="_WSPieceRectWithLabel" Content="영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
-                        <Label x:Name="_WSPieceRectHeightLabel" Content="영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece1RectXLabel" Content="1 영역 X 좌표 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece1RectYLabel" Content="1 영역 Y 좌표 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece1RectWithLabel" Content="1 영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece1RectHeightLabel" Content="1 영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
                         <Separator />
-                        <Label x:Name="_WSPieceImageWidthLabel" Content="이미지 너비 : 10" Margin="5, 0, 0, 0"></Label>
-                        <Label x:Name="_WSPieceImageHeightLabel" Content="이미지 높이 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece2RectXLabel" Content="2 영역 X 좌표 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece2RectYLabel" Content="2 영역 Y 좌표 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece2RectWithLabel" Content="2 영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
+                        <Label x:Name="_WSPiece2RectHeightLabel" Content="2 영역 너비 : 10" Margin="5, 0, 0, 0"></Label>
                     </StackPanel>
                 </Border>
             </Grid>
